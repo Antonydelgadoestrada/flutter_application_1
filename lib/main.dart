@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'database.dart';
 import 'home_page.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
+import 'database.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // AGREGAMOS LOS USUARIOS PREDEFINIDOS
-  await DBHelper.registrarUsuario('admin', '1234');
-  await DBHelper.registrarUsuario('usuario', 'abcd');
+
   runApp(const MainApp());
 }
 
@@ -33,14 +33,42 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController userController = TextEditingController();
   final TextEditingController passController = TextEditingController();
 
+  Future<List<Map<String, dynamic>>> cargarUsuariosDesdeJson() async {
+    final String jsonString = await rootBundle.loadString(
+      'assets/usuarios.json',
+    );
+    final List<dynamic> jsonData = json.decode(jsonString);
+    return jsonData.cast<Map<String, dynamic>>();
+  }
+
+  Future<bool> validarUsuarioJson(String usuario, String password) async {
+    final usuarios = await cargarUsuariosDesdeJson();
+    return usuarios.any(
+      (u) => u['usuario'] == usuario && u['password'] == password,
+    );
+  }
+
+  Future<Map<String, dynamic>?> obtenerDatosUsuarioJson(String usuario) async {
+    final usuarios = await cargarUsuariosDesdeJson();
+    try {
+      return usuarios.firstWhere((u) => u['usuario'] == usuario);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> validarUsuarioSQLite(String usuario, String password) async {
+    return await DBHelper.validarUsuario(usuario, password);
+  }
+
   Future<void> _login() async {
     final usuario = userController.text.trim();
     final password = passController.text.trim();
-    final valido = await DBHelper.validarUsuario(usuario, password);
+    final valido = await validarUsuarioSQLite(usuario, password);
     if (valido) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        MaterialPageRoute(builder: (_) => HomePage(usuarioLogueado: usuario)),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

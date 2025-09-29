@@ -1,0 +1,14 @@
+[
+  {
+    "nombre": "Juan Pérez",
+    "actividades_diarias": [
+      {
+        "fecha": "2025-09-26",
+        "actividad": "Riego",
+        "cantidad": "1000",
+        "jornales": "2",
+        "responsable": "Juan Pérez"
+      }
+    ]
+  }
+]

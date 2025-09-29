@@ -1,0 +1,28 @@
+[
+  {
+    "nombre": "Productor 1",
+    "codigo": "P001",
+    "area_total": 100,
+    "area": 80,
+    "cultivo": "Maíz",
+    "estimado_cosecha": 5000,
+    "densidad": 1.2,
+    "anio_siembra": 2022,
+    "ubicacion": "Finca A",
+    "coordenadas": [19.4326, -99.1332],
+    "gnn": "GNN001"
+  },
+  {
+    "nombre": "Productor 2",
+    "codigo": "P002",
+    "area_total": 150,
+    "area": 120,
+    "cultivo": "Trigo",
+    "estimado_cosecha": 7000,
+    "densidad": 1.5,
+    "anio_siembra": 2021,
+    "ubicacion": "Finca B",
+    "coordenadas": [20.6597, -103.3496],
+    "gnn": "GNN002"
+  }
+]
