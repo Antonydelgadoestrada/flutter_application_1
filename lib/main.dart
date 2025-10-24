@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
-import 'database.dart';
+import 'database_usuarios.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +42,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<bool> validarUsuarioJson(String usuario, String password) async {
-    final usuarios = await cargarUsuariosDesdeJson();
+    final String jsonString = await rootBundle.loadString(
+      'assets/usuarios.json',
+    );
+    final List<dynamic> usuarios = json.decode(jsonString);
     return usuarios.any(
       (u) => u['usuario'] == usuario && u['password'] == password,
     );
@@ -86,10 +89,7 @@ class _LoginPageState extends State<LoginPage> {
           Image.asset('assets/background.jpg', fit: BoxFit.cover),
           SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 30,
-                vertical: 110,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 80),
               child: Column(
                 children: [
                   Align(
@@ -98,7 +98,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: Image.asset(
                       'assets/logo.png',
                       height: 250,
-                      width: 250,
+                      width: 310555,
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -145,7 +145,27 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: _login,
+                    onPressed: () async {
+                      bool valido = await validarUsuarioJson(
+                        userController.text,
+                        passController.text,
+                      );
+                      if (valido) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                HomePage(usuarioLogueado: userController.text),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Usuario o contraseña incorrectos'),
+                          ),
+                        );
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),

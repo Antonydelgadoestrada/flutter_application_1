@@ -1,18 +1,18 @@
 [
   {
-    "usuario": "usuario1",
-    "password": "abcd",
-    "dni": "61021531",
-    "correo": "nashss@gmail.com",
-    "telefono": "nashss@gmail.com",
-    "cargo": "Inspector blabla"
+    "usuario": "AntonyDelgado",
+    "password": "181513114",
+    "dni": "60758137",
+    "correo": "antony.delgadoestrada@gmail.com",
+    "telefono": "981768092",
+    "cargo": "Inspector"
   },
   {
-    "usuario": "usuario2",
-    "password": "1234",
+    "usuario": "usuario1",
+    "password": "abcd",
     "dni": "12345678",
     "correo": "otro@mail.com",
     "telefono": "987654321",
-    "cargo": "Productor"
+    "cargo": "Inspector"
   }
 ]

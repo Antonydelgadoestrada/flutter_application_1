@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
-import 'database.dart';
+import 'database_usuarios.dart';
 
 class UserPage extends StatefulWidget {
   final String usuario; // Recibe el nombre del usuario
@@ -21,7 +21,14 @@ class _UserPageState extends State<UserPage> {
   }
 
   Future<void> cargarDatosUsuario() async {
-    final usuario = await DBHelper.obtenerUsuario(widget.usuario);
+    final String jsonString = await rootBundle.loadString(
+      'assets/usuarios.json',
+    );
+    final List<dynamic> usuarios = json.decode(jsonString);
+    final usuario = usuarios.firstWhere(
+      (u) => u['usuario'] == widget.usuario,
+      orElse: () => null,
+    );
     setState(() {
       datosUsuario = usuario;
     });

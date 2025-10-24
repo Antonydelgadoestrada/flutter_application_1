@@ -30,6 +30,17 @@ class DBActividades {
             observaciones TEXT
           )
         ''');
+        await db.execute('''
+          CREATE TABLE riegos(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            actividadId INTEGER,
+            cantidad_agua TEXT,
+            metodo TEXT,
+            hora TEXT,
+            observaciones TEXT,
+            FOREIGN KEY (actividadId) REFERENCES actividades_diarias(id)
+          )
+        ''');
       },
     );
   }
@@ -75,4 +86,6 @@ class DBActividades {
     final dbClient = await db;
     return await dbClient.query('actividades');
   }
+
+  static Future<void> agregarRiego(Map<String, Object> nuevoRiego) async {}
 }
