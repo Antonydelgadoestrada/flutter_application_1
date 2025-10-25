@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'agregar_productor.dart';
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'database_productores.dart';
+import 'database_productores.dart'; // asegúrate de tener esta importación
 
 class SelectProductorPage extends StatefulWidget {
   const SelectProductorPage({super.key, required List<String> productores});
@@ -25,9 +21,25 @@ class _SelectProductorPageState extends State<SelectProductorPage> {
   }
 
   Future<void> cargarProductores() async {
-    List<Map<String, dynamic>> lista = await DBProductores.obtenerProductores();
+    final lista = await DBProductores.obtenerProductores();
+    // imprime para depuración: pega la salida si sigue sin verse
+    debugPrint('Productores cargados: ${lista.length}');
+    if (lista.isNotEmpty) debugPrint(lista.first.toString());
+
+    // normaliza nombre de campo para mostrar en la UI
+    final normalizados = lista.map((p) {
+      final cultivo =
+          (p['cultivo'] ??
+                  p['cultivo_variedad'] ??
+                  p['cultivoSeleccionado'] ??
+                  p['cultivo_seleccionado'] ??
+                  '')
+              .toString();
+      return {...p, 'cultivo_display': cultivo};
+    }).toList();
+
     setState(() {
-      productores = lista;
+      productores = normalizados;
       cargando = false;
     });
   }
@@ -99,7 +111,7 @@ class _SelectProductorPageState extends State<SelectProductorPage> {
                                   ),
                                   title: Text(productor['nombre'] ?? ''),
                                   subtitle: Text(
-                                    'Cultivo: ${productor['cultivo'] ?? ''}',
+                                    'Cultivo: ${productor['cultivo_display'] ?? ''}',
                                   ),
                                   onTap: () => _seleccionarProductor(productor),
                                   trailing: IconButton(

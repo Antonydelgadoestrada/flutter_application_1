@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
-import 'database_usuarios.dart';
 
 class UserPage extends StatefulWidget {
   final String usuario; // Recibe el nombre del usuario

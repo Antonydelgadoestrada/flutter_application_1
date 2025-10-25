@@ -3,6 +3,9 @@ import 'package:flutter_application_1/user_page.dart';
 import 'package:flutter_application_1/lista_productores.dart'; // Asegúrate de importar la página de selección de productor
 import 'main.dart'; // Importa el archivo donde está LoginPage
 import 'package:flutter_application_1/nueva_actividad_diaria.dart'; // Importa la página de nueva actividad diaria
+import 'package:flutter_application_1/ver_registros.dart'; // Importa la página de ver registros
+import 'package:flutter_application_1/database_productores.dart'; // Importa tu clase de base de datos
+import 'reportes_page.dart';
 
 class HomePage extends StatelessWidget {
   final String? productorSeleccionado;
@@ -48,7 +51,7 @@ class HomePage extends StatelessWidget {
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        title: Image.asset('assets/logo.png', height: 60),
+        title: Image.asset('assets/logo.png', height: 100),
         centerTitle: true,
         actions: [
           IconButton(
@@ -239,8 +242,12 @@ class HomePage extends StatelessWidget {
                       if (productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
-                        // Aquí podrías navegar a una pantalla de reportes PDF
-                        // Ejemplo: Navigator.push(context, MaterialPageRoute(builder: (_) => ReportePDFPage()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ReportesPage(),
+                          ),
+                        );
                       }
                     },
                   ),
@@ -253,7 +260,12 @@ class HomePage extends StatelessWidget {
                       if (productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
-                        // Navegar a informes Excel
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ReportesPage(),
+                          ),
+                        );
                       }
                     },
                   ),
@@ -438,11 +450,32 @@ class HomePage extends StatelessWidget {
                   _HomeButton(
                     icon: Icons.insert_chart,
                     label: 'VER REGISTROS',
-                    onTap: () {
+                    onTap: () async {
                       if (productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
-                        // Navegar a registros
+                        // Aquí obtienes el ID del productor por su nombre
+                        final productorId =
+                            await DBProductores.obtenerIdPorNombre(
+                              productorSeleccionado!,
+                            );
+                        if (productorId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'No se encontró el productor en la base de datos.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                VerRegistrosPage(productorId: productorId),
+                          ),
+                        );
                       }
                     },
                   ),
@@ -453,7 +486,12 @@ class HomePage extends StatelessWidget {
                       if (productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
-                        // Navegar a reportes
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ReportesPage(),
+                          ),
+                        );
                       }
                     },
                   ),
