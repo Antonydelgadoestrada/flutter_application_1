@@ -16,12 +16,17 @@ dependencies:
   printing: ^5.10.0
   excel: ^2.0.3
   url_launcher: ^6.1.10
-
+  http: ^0.13.6
+  firebase_core: ^2.10.0
+  cloud_firestore: ^4.8.0
+  firebase_auth: ^4.6.0        # opcional (recomendado)
+  firebase_storage: ^11.1.0    # opcional (para fotos)
+  shared_preferences: ^2.1.1
+  connectivity_plus: ^4.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true

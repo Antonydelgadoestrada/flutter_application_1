@@ -125,7 +125,7 @@ class _NuevaActividadDiariaPageState extends State<NuevaActividadDiariaPage> {
           productorId: productorId,
           responsable: widget.nombreProductor,
           observaciones: '',
-          fecha: fechaCosechaController.text,
+          fechaCosecha: fechaCosechaController.text,
           tipo: tipoController.text,
           cantidad: cantidadCosechaController.text,
           cliente: clienteController.text,

@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
+    id("org.jetbrains.kotlin.android") // o el plugin Kotlin que uses
+    id("com.google.gms.google-services") // { changed code } añadir aquí
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -42,3 +43,7 @@ android {
 flutter {
     source = "../.."
 }
+
+// The Google Services plugin is declared in the plugins block above and
+// its version is provided via pluginManagement in settings.gradle.kts.
+// Do not use Groovy-style `apply plugin:` or embed AndroidManifest XML here.

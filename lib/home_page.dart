@@ -6,6 +6,7 @@ import 'package:flutter_application_1/nueva_actividad_diaria.dart'; // Importa l
 import 'package:flutter_application_1/ver_registros.dart'; // Importa la página de ver registros
 import 'package:flutter_application_1/database_productores.dart'; // Importa tu clase de base de datos
 import 'reportes_page.dart';
+import 'firestore_sync_manager.dart';
 
 class HomePage extends StatelessWidget {
   final String? productorSeleccionado;
@@ -54,6 +55,28 @@ class HomePage extends StatelessWidget {
         title: Image.asset('assets/logo.png', height: 100),
         centerTitle: true,
         actions: [
+          // { changed code } botón pequeño de sincronización
+          IconButton(
+            icon: const Icon(Icons.sync, color: Colors.black),
+            tooltip: 'Sincronizar ahora',
+            onPressed: () async {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Iniciando sincronización...')),
+              );
+              try {
+                await FirestoreSyncManager.runSync();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sincronización completada.')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error en sincronización: ${e.toString()}'),
+                  ),
+                );
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.person, color: Colors.black),
             onPressed: () {

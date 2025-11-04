@@ -1,225 +1,91 @@
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
+import 'db_helper.dart';
 
 class DBActividades {
-  static Database? _db;
-
-  static Future<Database> get db async {
-    if (_db != null) return _db!;
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final path = join(documentsDirectory.path, 'app.db');
-
-    _db = await openDatabase(
-      path,
-      version: 2,
-      onCreate: (Database db, int version) async {
-        // crea tabla actividades
-        await db.execute('''
-          CREATE TABLE actividades(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            productorId INTEGER,
-            fecha TEXT,
-            actividad TEXT,
-            responsable TEXT,
-            cantidad TEXT,
-            jornales TEXT,
-            observaciones TEXT
-          )
-        ''');
-
-        // crea tabla riegos (asegúrate de que exista)
-        await db.execute('''
-          CREATE TABLE riegos(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            actividadId INTEGER,
-            cantidad_agua TEXT,
-            metodo TEXT,
-            hora TEXT,
-            observaciones TEXT,
-            FOREIGN KEY (actividadId) REFERENCES actividades(id)
-          )
-        ''');
-
-        // crea tabla fertilizaciones
-        await db.execute('''
-          CREATE TABLE fertilizaciones(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            actividadId INTEGER,
-            sector TEXT,
-            cultivo_variedad TEXT,
-            contenido_nutricional TEXT,
-            fecha_aplicacion TEXT,
-            metodo_aplicacion TEXT,
-            operador TEXT,
-            area TEXT,
-            cantidad TEXT,
-            codigo TEXT,
-            productor TEXT,
-            FOREIGN KEY (actividadId) REFERENCES actividades(id)
-          )
-        ''');
-
-        // crea tabla cosechas
-        await db.execute('''
-          CREATE TABLE cosechas(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            actividadId INTEGER,
-            fecha TEXT,
-            tipo TEXT,
-            cantidad TEXT,
-            cliente TEXT,
-            numero_liquidacion TEXT,
-            FOREIGN KEY (actividadId) REFERENCES actividades(id)
-          )
-        ''');
-      },
-      onUpgrade: (Database db, int oldVersion, int newVersion) async {
-        if (oldVersion < 2) {
-          try {
-            await db.execute(
-              "ALTER TABLE actividades ADD COLUMN cantidad TEXT;",
-            );
-          } catch (_) {}
-          try {
-            await db.execute(
-              "ALTER TABLE actividades ADD COLUMN jornales TEXT;",
-            );
-          } catch (_) {}
-          try {
-            await db.execute(
-              "ALTER TABLE actividades ADD COLUMN observaciones TEXT;",
-            );
-          } catch (_) {}
-          // Asegurarse de que las tablas nuevas existan tras upgrade
-          try {
-            await db.execute('''
-              CREATE TABLE IF NOT EXISTS riegos(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                actividadId INTEGER,
-                cantidad_agua TEXT,
-                metodo TEXT,
-                hora TEXT,
-                observaciones TEXT,
-                FOREIGN KEY (actividadId) REFERENCES actividades(id)
-              )
-            ''');
-          } catch (_) {}
-          try {
-            await db.execute('''
-              CREATE TABLE IF NOT EXISTS fertilizaciones(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                actividadId INTEGER,
-                sector TEXT,
-                cultivo_variedad TEXT,
-                contenido_nutricional TEXT,
-                fecha_aplicacion TEXT,
-                metodo_aplicacion TEXT,
-                operador TEXT,
-                area TEXT,
-                cantidad TEXT,
-                codigo TEXT,
-                productor TEXT,
-                FOREIGN KEY (actividadId) REFERENCES actividades(id)
-              )
-            ''');
-          } catch (_) {}
-          try {
-            await db.execute('''
-              CREATE TABLE IF NOT EXISTS cosechas(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                actividadId INTEGER,
-                fecha TEXT,
-                tipo TEXT,
-                cantidad TEXT,
-                cliente TEXT,
-                numero_liquidacion TEXT,
-                FOREIGN KEY (actividadId) REFERENCES actividades(id)
-              )
-            ''');
-          } catch (_) {}
-        }
-      },
-    );
-
-    // seguridad extra si la BD ya existía pero faltan tablas
-    await _db!.execute('''
-      CREATE TABLE IF NOT EXISTS actividades(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        productorId INTEGER,
-        fecha TEXT,
-        actividad TEXT,
-        responsable TEXT,
-        cantidad TEXT,
-        jornales TEXT,
-        observaciones TEXT
-      )
-    ''');
-    await _db!.execute('''
-      CREATE TABLE IF NOT EXISTS riegos(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        actividadId INTEGER,
-        cantidad_agua TEXT,
-        metodo TEXT,
-        hora TEXT,
-        observaciones TEXT,
-        FOREIGN KEY (actividadId) REFERENCES actividades(id)
-      )
-    ''');
-    await _db!.execute('''
-      CREATE TABLE IF NOT EXISTS fertilizaciones(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        actividadId INTEGER,
-        sector TEXT,
-        cultivo_variedad TEXT,
-        contenido_nutricional TEXT,
-        fecha_aplicacion TEXT,
-        metodo_aplicacion TEXT,
-        operador TEXT,
-        area TEXT,
-        cantidad TEXT,
-        codigo TEXT,
-        productor TEXT,
-        FOREIGN KEY (actividadId) REFERENCES actividades(id)
-      )
-    ''');
-    await _db!.execute('''
-      CREATE TABLE IF NOT EXISTS cosechas(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        actividadId INTEGER,
-        fecha TEXT,
-        tipo TEXT,
-        cantidad TEXT,
-        cliente TEXT,
-        numero_liquidacion TEXT,
-        FOREIGN KEY (actividadId) REFERENCES actividades(id)
-      )
-    ''');
-
-    return _db!;
-  }
-
+  // Exportar actividades a JSON (mantener compatibilidad)
   static Future<void> _exportarActividadesAJson() async {
-    final actividades = await obtenerTodasActividades();
-    final directory = await getApplicationDocumentsDirectory();
-    final path = '${directory.path}/actividades_diarias.json';
-    final file = File(path);
-    await file.writeAsString(json.encode(actividades));
+    final list = await obtenerTodasActividades();
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/actividades_diarias.json');
+    await file.writeAsString(json.encode(list));
   }
 
+  // --- Actividades ---
   static Future<int> agregarActividad(Map<String, dynamic> actividad) async {
-    final dbClient = await db;
-    final id = await dbClient.insert('actividades', actividad);
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final data = {
+      ...actividad,
+      'id_remoto': actividad['id_remoto'],
+      'sync_status': actividad['sync_status'] ?? 'pending',
+      'updated_at': actividad['updated_at'] ?? now,
+      'deleted_at': actividad['deleted_at'],
+    };
+    final id = await dbClient.insert('actividades', data);
     await _exportarActividadesAJson();
     return id;
+  }
+
+  static Future<int> actualizarActividad(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final payload = {
+      ...data,
+      'sync_status': data['sync_status'] ?? 'pending',
+      'updated_at': data['updated_at'] ?? now,
+    };
+    final res = await dbClient.update(
+      'actividades',
+      payload,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await _exportarActividadesAJson();
+    return res;
+  }
+
+  static Future<int> eliminarActividad(int id) async {
+    final dbClient = await DBHelper.database;
+    final existing = await dbClient.query(
+      'actividades',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (existing.isEmpty) return 0;
+    final row = existing.first;
+    final now = DateTime.now().toIso8601String();
+    if (row['id_remoto'] != null) {
+      // soft delete para sincronización
+      final res = await dbClient.update(
+        'actividades',
+        {'sync_status': 'deleted', 'deleted_at': now, 'updated_at': now},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await _exportarActividadesAJson();
+      return res;
+    } else {
+      final res = await dbClient.delete(
+        'actividades',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await _exportarActividadesAJson();
+      return res;
+    }
   }
 
   static Future<List<Map<String, dynamic>>> obtenerActividadesPorProductor(
     int productorId,
   ) async {
-    final dbClient = await db;
+    final dbClient = await DBHelper.database;
     try {
       return await dbClient.query(
         'actividades',
@@ -229,8 +95,8 @@ class DBActividades {
       );
     } on DatabaseException catch (e) {
       final msg = e.toString();
-      if (msg.contains('no such table') || msg.contains('no such column')) {
-        // Crear tabla si falta (schema mínimo esperado)
+      if (msg.contains('no such table')) {
+        // crear tabla si falta y reintentar
         await dbClient.execute('''
           CREATE TABLE IF NOT EXISTS actividades(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -240,10 +106,13 @@ class DBActividades {
             responsable TEXT,
             cantidad TEXT,
             jornales TEXT,
-            observaciones TEXT
+            observaciones TEXT,
+            id_remoto TEXT,
+            sync_status TEXT,
+            updated_at TEXT,
+            deleted_at TEXT
           )
         ''');
-        // reintentar la consulta
         return await dbClient.query(
           'actividades',
           where: 'productorId = ?',
@@ -255,10 +124,29 @@ class DBActividades {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> obtenerTodasActividades() async {
+    final dbClient = await DBHelper.database;
+    return await dbClient.query('actividades', orderBy: 'fecha DESC, id DESC');
+  }
+
+  // --- Riegos ---
+  static Future<int> agregarRiego(Map<String, dynamic> riego) async {
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final data = {
+      ...riego,
+      'id_remoto': riego['id_remoto'],
+      'sync_status': riego['sync_status'] ?? 'pending',
+      'updated_at': riego['updated_at'] ?? now,
+      'deleted_at': riego['deleted_at'],
+    };
+    return await dbClient.insert('riegos', data);
+  }
+
   static Future<Map<String, dynamic>?> obtenerRiegoPorActividad(
     int actividadId,
   ) async {
-    final dbClient = await db;
+    final dbClient = await DBHelper.database;
     final res = await dbClient.query(
       'riegos',
       where: 'actividadId = ?',
@@ -268,10 +156,63 @@ class DBActividades {
     return res.isNotEmpty ? res.first : null;
   }
 
+  static Future<int> actualizarRiego(int id, Map<String, dynamic> data) async {
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final payload = {
+      ...data,
+      'sync_status': data['sync_status'] ?? 'pending',
+      'updated_at': data['updated_at'] ?? now,
+    };
+    return await dbClient.update(
+      'riegos',
+      payload,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  static Future<int> eliminarRiego(int id) async {
+    final dbClient = await DBHelper.database;
+    final existing = await dbClient.query(
+      'riegos',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (existing.isEmpty) return 0;
+    final row = existing.first;
+    final now = DateTime.now().toIso8601String();
+    if (row['id_remoto'] != null) {
+      return await dbClient.update(
+        'riegos',
+        {'sync_status': 'deleted', 'deleted_at': now, 'updated_at': now},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } else {
+      return await dbClient.delete('riegos', where: 'id = ?', whereArgs: [id]);
+    }
+  }
+
+  // --- Fertilizaciones ---
+  static Future<int> agregarFertilizacion(Map<String, dynamic> fert) async {
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final data = {
+      ...fert,
+      'id_remoto': fert['id_remoto'],
+      'sync_status': fert['sync_status'] ?? 'pending',
+      'updated_at': fert['updated_at'] ?? now,
+      'deleted_at': fert['deleted_at'],
+    };
+    return await dbClient.insert('fertilizaciones', data);
+  }
+
   static Future<Map<String, dynamic>?> obtenerFertilizacionPorActividad(
     int actividadId,
   ) async {
-    final dbClient = await db;
+    final dbClient = await DBHelper.database;
     final res = await dbClient.query(
       'fertilizaciones',
       where: 'actividadId = ?',
@@ -281,10 +222,70 @@ class DBActividades {
     return res.isNotEmpty ? res.first : null;
   }
 
+  static Future<int> actualizarFertilizacion(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final payload = {
+      ...data,
+      'sync_status': data['sync_status'] ?? 'pending',
+      'updated_at': data['updated_at'] ?? now,
+    };
+    return await dbClient.update(
+      'fertilizaciones',
+      payload,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  static Future<int> eliminarFertilizacion(int id) async {
+    final dbClient = await DBHelper.database;
+    final existing = await dbClient.query(
+      'fertilizaciones',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (existing.isEmpty) return 0;
+    final row = existing.first;
+    final now = DateTime.now().toIso8601String();
+    if (row['id_remoto'] != null) {
+      return await dbClient.update(
+        'fertilizaciones',
+        {'sync_status': 'deleted', 'deleted_at': now, 'updated_at': now},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } else {
+      return await dbClient.delete(
+        'fertilizaciones',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
+  }
+
+  // --- Cosechas ---
+  static Future<int> agregarCosecha(Map<String, dynamic> cosecha) async {
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final data = {
+      ...cosecha,
+      'id_remoto': cosecha['id_remoto'],
+      'sync_status': cosecha['sync_status'] ?? 'pending',
+      'updated_at': cosecha['updated_at'] ?? now,
+      'deleted_at': cosecha['deleted_at'],
+    };
+    return await dbClient.insert('cosechas', data);
+  }
+
   static Future<Map<String, dynamic>?> obtenerCosechaPorActividad(
     int actividadId,
   ) async {
-    final dbClient = await db;
+    final dbClient = await DBHelper.database;
     final res = await dbClient.query(
       'cosechas',
       where: 'actividadId = ?',
@@ -294,69 +295,188 @@ class DBActividades {
     return res.isNotEmpty ? res.first : null;
   }
 
-  static Future<int> eliminarActividad(int id) async {
-    final dbClient = await db;
-    final res = await dbClient.delete(
-      'actividades',
+  static Future<int> actualizarCosecha(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final payload = {
+      ...data,
+      'sync_status': data['sync_status'] ?? 'pending',
+      'updated_at': data['updated_at'] ?? now,
+    };
+    return await dbClient.update(
+      'cosechas',
+      payload,
       where: 'id = ?',
       whereArgs: [id],
     );
-    await _exportarActividadesAJson();
-    return res;
   }
 
-  static Future<List<Map<String, dynamic>>> obtenerTodasActividades() async {
-    final dbClient = await db;
-    return await dbClient.query('actividades', orderBy: 'fecha DESC, id DESC');
+  static Future<int> eliminarCosecha(int id) async {
+    final dbClient = await DBHelper.database;
+    final existing = await dbClient.query(
+      'cosechas',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (existing.isEmpty) return 0;
+    final row = existing.first;
+    final now = DateTime.now().toIso8601String();
+    if (row['id_remoto'] != null) {
+      return await dbClient.update(
+        'cosechas',
+        {'sync_status': 'deleted', 'deleted_at': now, 'updated_at': now},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } else {
+      return await dbClient.delete(
+        'cosechas',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
   }
 
-  static Future<void> agregarRiego(Map<String, Object?> nuevoRiego) async {
-    final dbClient = await db;
-    await dbClient.insert('riegos', nuevoRiego);
+  // --- Utilidades para sync: obtener cambios pendientes ---
+  static Future<List<Map<String, dynamic>>> obtenerCambiosPendientes({
+    int limit = 500,
+  }) async {
+    final dbClient = await DBHelper.database;
+    final List<Map<String, dynamic>> resultados = [];
+    // tablas a revisar
+    final tablas = [
+      'productores',
+      'actividades',
+      'riegos',
+      'fertilizaciones',
+      'cosechas',
+    ];
+    for (final t in tablas) {
+      try {
+        final rows = await dbClient.query(
+          t,
+          where: 'sync_status IS NOT NULL AND sync_status != ?',
+          whereArgs: ['synced'],
+          limit: limit,
+        );
+        for (final r in rows) {
+          resultados.add({'tabla': t, 'fila': r});
+        }
+      } catch (e) {
+        // tabla puede no existir aún, ignorar
+      }
+    }
+    return resultados;
   }
 
-  static Future<void> agregarCosecha(Map<String, Object?> nuevaCosecha) async {
-    final dbClient = await db;
-    await dbClient.insert('cosechas', nuevaCosecha);
+  // Marcar filas como 'syncing' antes de enviar
+  static Future<void> marcarComoSyncing(String tabla, List<int> ids) async {
+    if (ids.isEmpty) return;
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toUtc().toIso8601String();
+    for (final id in ids) {
+      try {
+        await dbClient.update(
+          tabla,
+          {'sync_status': 'syncing', 'updated_at': now},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      } catch (_) {}
+    }
   }
 
-  static Future<void> agregarFertilizacion(
-    Map<String, Object?> nuevaFertilizacion,
+  // Aplicar mapping id_local -> id_remoto y marcar como synced
+  static Future<void> aplicarResultadoServidor(
+    String tabla,
+    List<Map<String, dynamic>> resultados,
   ) async {
-    final dbClient = await db;
-    await dbClient.insert('fertilizaciones', nuevaFertilizacion);
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toUtc().toIso8601String();
+    for (final r in resultados) {
+      final idLocal = r['id_local'];
+      final idRemoto = r['id_remoto'];
+      final status = (r['status'] ?? 'ok').toString();
+      try {
+        if (status == 'ok') {
+          final payload = <String, Object?>{
+            'id_remoto': idRemoto,
+            'sync_status': 'synced',
+            'updated_at': now,
+          };
+          await dbClient.update(
+            tabla,
+            payload,
+            where: 'id = ?',
+            whereArgs: [idLocal],
+          );
+        } else {
+          // marcar error para reintento posterior
+          await dbClient.update(
+            tabla,
+            {'sync_status': 'error', 'updated_at': now},
+            where: 'id = ?',
+            whereArgs: [idLocal],
+          );
+        }
+      } catch (e) {
+        // ignorar errores puntuales
+      }
+    }
   }
 
-  static Future<void> realizarActividadDeRiego({
+  // { changed code } Helpers transaccionales para crear actividad + detalle
+  static Future<int> realizarActividadDeRiego({
     required int productorId,
     required String responsable,
-    required String observaciones,
+    String? fecha,
+    String? observaciones,
     required String cantidadAgua,
     required String metodoRiego,
     required String horaRiego,
-    required String observacionesRiego,
+    String? observacionesRiego,
   }) async {
-    final actividadId = await agregarActividad({
-      'productorId': productorId,
-      'fecha': DateTime.now().toIso8601String(),
-      'actividad': 'Riego',
-      'responsable': responsable,
-      'observaciones': observaciones,
-    });
-
-    await agregarRiego({
-      'actividadId': actividadId,
-      'cantidad_agua': cantidadAgua,
-      'metodo': metodoRiego,
-      'hora': horaRiego,
-      'observaciones': observacionesRiego,
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final fechaFinal = fecha ?? now;
+    return await dbClient.transaction<int>((txn) async {
+      final actividad = {
+        'productorId': productorId,
+        'fecha': fechaFinal,
+        'actividad': 'Riego',
+        'responsable': responsable,
+        'observaciones': observaciones ?? '',
+        'cantidad': '', // campo general si aplica
+        'jornales': null,
+        'id_remoto': null,
+        'sync_status': 'pending',
+        'updated_at': now,
+      };
+      final actividadId = await txn.insert('actividades', actividad);
+      final riego = {
+        'actividadId': actividadId,
+        'cantidad_agua': cantidadAgua,
+        'metodo': metodoRiego,
+        'hora': horaRiego,
+        'observaciones': observacionesRiego ?? '',
+        'id_remoto': null,
+        'sync_status': 'pending',
+        'updated_at': now,
+      };
+      await txn.insert('riegos', riego);
+      return actividadId;
     });
   }
 
-  static Future<void> realizarActividadDeFertilizacion({
+  static Future<int> realizarActividadDeFertilizacion({
     required int productorId,
     required String responsable,
-    required String observaciones,
+    String? fecha,
+    String? observaciones,
     required String sector,
     required String cultivoVariedad,
     required String contenidoNutricional,
@@ -366,57 +486,87 @@ class DBActividades {
     required String area,
     required String cantidad,
     required String codigo,
-    required String productor,
+    required String productor, // campo adicional en fertilizaciones
   }) async {
-    final actividadId = await agregarActividad({
-      'productorId': productorId,
-      'fecha': DateTime.now().toIso8601String(),
-      'actividad': 'Fertilización',
-      'responsable': responsable,
-      'observaciones': observaciones,
-    });
-
-    await agregarFertilizacion({
-      'actividadId': actividadId,
-      'sector': sector,
-      'cultivo_variedad': cultivoVariedad,
-      'contenido_nutricional': contenidoNutricional,
-      'fecha_aplicacion': fechaAplicacion,
-      'metodo_aplicacion': metodoAplicacion,
-      'operador': operador,
-      'area': area,
-      'cantidad': cantidad,
-      'codigo': codigo,
-      'productor': productor,
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final fechaFinal = fecha ?? now;
+    return await dbClient.transaction<int>((txn) async {
+      final actividad = {
+        'productorId': productorId,
+        'fecha': fechaFinal,
+        'actividad': 'Fertilización',
+        'responsable': responsable,
+        'observaciones': observaciones ?? '',
+        'cantidad': cantidad,
+        'jornales': null,
+        'id_remoto': null,
+        'sync_status': 'pending',
+        'updated_at': now,
+      };
+      final actividadId = await txn.insert('actividades', actividad);
+      final fert = {
+        'actividadId': actividadId,
+        'sector': sector,
+        'cultivo_variedad': cultivoVariedad,
+        'contenido_nutricional': contenidoNutricional,
+        'fecha_aplicacion': fechaAplicacion,
+        'metodo_aplicacion': metodoAplicacion,
+        'operador': operador,
+        'area': area,
+        'cantidad': cantidad,
+        'codigo': codigo,
+        'productor': productor,
+        'id_remoto': null,
+        'sync_status': 'pending',
+        'updated_at': now,
+      };
+      await txn.insert('fertilizaciones', fert);
+      return actividadId;
     });
   }
 
-  static Future<void> realizarActividadDeCosecha({
+  static Future<int> realizarActividadDeCosecha({
     required int productorId,
     required String responsable,
-    required String observaciones,
-    required String fecha,
+    String? fecha,
+    String? observaciones,
+    required String fechaCosecha,
     required String tipo,
     required String cantidad,
     required String cliente,
     required String numeroLiquidacion,
   }) async {
-    final actividadId = await agregarActividad({
-      'productorId': productorId,
-      'fecha': fecha,
-      'actividad': 'Cosecha',
-      'responsable': responsable,
-      'observaciones': observaciones,
-      'cantidad': cantidad,
-    });
-
-    await agregarCosecha({
-      'actividadId': actividadId,
-      'fecha': fecha,
-      'tipo': tipo,
-      'cantidad': cantidad,
-      'cliente': cliente,
-      'numero_liquidacion': numeroLiquidacion,
+    final dbClient = await DBHelper.database;
+    final now = DateTime.now().toIso8601String();
+    final fechaFinal = fecha ?? fechaCosecha ?? now;
+    return await dbClient.transaction<int>((txn) async {
+      final actividad = {
+        'productorId': productorId,
+        'fecha': fechaFinal,
+        'actividad': 'Cosecha',
+        'responsable': responsable,
+        'observaciones': observaciones ?? '',
+        'cantidad': cantidad,
+        'jornales': null,
+        'id_remoto': null,
+        'sync_status': 'pending',
+        'updated_at': now,
+      };
+      final actividadId = await txn.insert('actividades', actividad);
+      final cosecha = {
+        'actividadId': actividadId,
+        'fecha': fechaCosecha,
+        'tipo': tipo,
+        'cantidad': cantidad,
+        'cliente': cliente,
+        'numero_liquidacion': numeroLiquidacion,
+        'id_remoto': null,
+        'sync_status': 'pending',
+        'updated_at': now,
+      };
+      await txn.insert('cosechas', cosecha);
+      return actividadId;
     });
   }
 }
