@@ -1,14 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'home_page.dart';
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
+
 import 'database_usuarios.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Seed admin user in the local usuarios DB (creates admin/administrado1234 if missing)
+  try {
+    await DBHelper.seedAdmin();
+    // debug: listar usuarios existentes tras seed
+    try {
+      final all = await DBHelper.obtenerTodosUsuarios();
+      debugPrint('Usuarios en usuarios.db después de seed: $all');
+    } catch (e) {
+      debugPrint('No se pudieron listar usuarios tras seed: $e');
+    }
+  } catch (e) {
+    // ignore seed errors during startup
+  }
   runApp(const MyApp());
 }
 
@@ -35,47 +47,37 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController userController = TextEditingController();
   final TextEditingController passController = TextEditingController();
 
-  Future<List<Map<String, dynamic>>> cargarUsuariosDesdeJson() async {
-    final String jsonString = await rootBundle.loadString(
-      'assets/usuarios.json',
-    );
-    final List<dynamic> jsonData = json.decode(jsonString);
-    return jsonData.cast<Map<String, dynamic>>();
-  }
-
-  Future<bool> validarUsuarioJson(String usuario, String password) async {
-    final String jsonString = await rootBundle.loadString(
-      'assets/usuarios.json',
-    );
-    final List<dynamic> usuarios = json.decode(jsonString);
-    return usuarios.any(
-      (u) => u['usuario'] == usuario && u['password'] == password,
-    );
-  }
-
-  Future<Map<String, dynamic>?> obtenerDatosUsuarioJson(String usuario) async {
-    final usuarios = await cargarUsuariosDesdeJson();
-    try {
-      return usuarios.firstWhere((u) => u['usuario'] == usuario);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<bool> validarUsuarioSQLite(String usuario, String password) async {
+  Future<Map<String, dynamic>?> validarUsuarioSQLite(
+    String usuario,
+    String password,
+  ) async {
     return await DBHelper.validarUsuario(usuario, password);
   }
 
   Future<void> _login() async {
     final usuario = userController.text.trim();
     final password = passController.text.trim();
-    final valido = await validarUsuarioSQLite(usuario, password);
-    if (valido) {
+    final userData = await validarUsuarioSQLite(usuario, password);
+
+    if (userData != null) {
+      debugPrint('Login exitoso: $userData'); // Debug info
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => HomePage(usuarioLogueado: usuario)),
+        MaterialPageRoute(
+          builder: (_) => HomePage(
+            usuarioLogueado: userData['usuario'] as String,
+            isAdmin: userData['role'] == 'admin',
+          ),
+        ),
       );
     } else {
+      // debug info: mostrar usuario buscado y si existe en DB
+      try {
+        final found = await DBHelper.obtenerUsuario(usuario);
+        debugPrint('Login fallido para $usuario. Registro en DB: $found');
+      } catch (e) {
+        debugPrint('Error al comprobar usuario en DB: $e');
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Usuario o contraseña incorrectos')),
       );
@@ -147,27 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () async {
-                      bool valido = await validarUsuarioJson(
-                        userController.text,
-                        passController.text,
-                      );
-                      if (valido) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                HomePage(usuarioLogueado: userController.text),
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Usuario o contraseña incorrectos'),
-                          ),
-                        );
-                      }
-                    },
+                    onPressed: _login,
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),

@@ -73,6 +73,14 @@ class _AddProductorPageState extends State<AddProductorPage> {
       'area_total': areaTotalController.text.trim(),
       'area': areaController.text.trim(),
       'cultivo': cultivoSeleccionado ?? '',
+      // Campos adicionales que antes no se guardaban y causaban null en Firestore
+      'estimado_cosecha': estimadoController.text.trim(),
+      'densidad': densidadController.text.trim(),
+      // En la base de datos la columna se llama `anio_siembra`
+      'anio_siembra': anioController.text.trim(),
+      'ubicacion': ubicacionController.text.trim(),
+      'coordenadas': coordenadasController.text.trim(),
+      'gnn': gnnController.text.trim(),
     };
 
     try {

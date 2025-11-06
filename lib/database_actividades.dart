@@ -539,7 +539,8 @@ class DBActividades {
   }) async {
     final dbClient = await DBHelper.database;
     final now = DateTime.now().toIso8601String();
-    final fechaFinal = fecha ?? fechaCosecha ?? now;
+    // fechaCosecha es obligatoria (non-nullable), por lo tanto basta con:
+    final fechaFinal = fecha ?? fechaCosecha;
     return await dbClient.transaction<int>((txn) async {
       final actividad = {
         'productorId': productorId,

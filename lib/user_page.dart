@@ -1,6 +1,5 @@
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
+import 'database_usuarios.dart';
 
 class UserPage extends StatefulWidget {
   final String usuario; // Recibe el nombre del usuario
@@ -20,16 +19,9 @@ class _UserPageState extends State<UserPage> {
   }
 
   Future<void> cargarDatosUsuario() async {
-    final String jsonString = await rootBundle.loadString(
-      'assets/usuarios.json',
-    );
-    final List<dynamic> usuarios = json.decode(jsonString);
-    final usuario = usuarios.firstWhere(
-      (u) => u['usuario'] == widget.usuario,
-      orElse: () => null,
-    );
+    final datos = await DBHelper.obtenerUsuario(widget.usuario);
     setState(() {
-      datosUsuario = usuario;
+      datosUsuario = datos;
     });
   }
 
@@ -95,52 +87,47 @@ class _UserPageState extends State<UserPage> {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: datosUsuario!['dni'] ?? '',
-                                decoration: const InputDecoration(
-                                  labelText: 'DNI',
-                                ),
-                                readOnly: true,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: datosUsuario!['cargo'] ?? '',
-                                decoration: const InputDecoration(
-                                  labelText: 'Cargo',
-                                ),
-                                readOnly: true,
-                              ),
-                            ),
-                          ],
+                        // DNI
+                        ListTile(
+                          leading: const Icon(Icons.badge_outlined),
+                          title: Text(
+                            datosUsuario!['dni'] ?? 'No especificado',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          subtitle: const Text('DNI'),
                         ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: datosUsuario!['correo'] ?? '',
-                                decoration: const InputDecoration(
-                                  labelText: 'Correo',
-                                ),
-                                readOnly: true,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: datosUsuario!['telefono'] ?? '',
-                                decoration: const InputDecoration(
-                                  labelText: 'Teléfono',
-                                ),
-                                readOnly: true,
-                              ),
-                            ),
-                          ],
+                        const Divider(),
+
+                        // Cargo
+                        ListTile(
+                          leading: const Icon(Icons.work_outline),
+                          title: Text(
+                            datosUsuario!['cargo'] ?? 'No especificado',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          subtitle: const Text('Cargo'),
+                        ),
+                        const Divider(),
+
+                        // Correo
+                        ListTile(
+                          leading: const Icon(Icons.email_outlined),
+                          title: Text(
+                            datosUsuario!['correo'] ?? 'No especificado',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          subtitle: const Text('Correo electrónico'),
+                        ),
+                        const Divider(),
+
+                        // Teléfono
+                        ListTile(
+                          leading: const Icon(Icons.phone_outlined),
+                          title: Text(
+                            datosUsuario!['telefono'] ?? 'No especificado',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          subtitle: const Text('Teléfono'),
                         ),
                       ],
                     ),

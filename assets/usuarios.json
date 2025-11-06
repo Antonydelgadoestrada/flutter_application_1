@@ -14,5 +14,15 @@
     "correo": "otro@mail.com",
     "telefono": "987654321",
     "cargo": "Inspector"
+  },
+  {
+    "usuario": "admin",
+    "password": "administrado1234",
+    "dni": "",
+    "correo": "",
+    "telefono": "",
+    "cargo": "administrador"
   }
+
+
 ]

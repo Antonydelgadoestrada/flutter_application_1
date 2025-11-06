@@ -7,14 +7,18 @@ import 'package:flutter_application_1/ver_registros.dart'; // Importa la página
 import 'package:flutter_application_1/database_productores.dart'; // Importa tu clase de base de datos
 import 'reportes_page.dart';
 import 'firestore_sync_manager.dart';
+import 'database_usuarios.dart';
+import 'admin_users_page.dart';
 
 class HomePage extends StatelessWidget {
   final String? productorSeleccionado;
   final String usuarioLogueado;
+  final bool isAdmin;
   const HomePage({
     super.key,
     this.productorSeleccionado,
     required this.usuarioLogueado,
+    this.isAdmin = false,
   });
 
   void _cerrarSesion(BuildContext context) {
@@ -164,6 +168,7 @@ class HomePage extends StatelessWidget {
                             builder: (_) => HomePage(
                               productorSeleccionado: productor,
                               usuarioLogueado: usuarioLogueado,
+                              isAdmin: isAdmin,
                             ),
                           ),
                         );
@@ -367,6 +372,45 @@ class HomePage extends StatelessWidget {
                   onTap: () => _cerrarSesion(context),
                 ),
               ),
+              // Botón para administrar usuarios (sólo accesible por admin)
+              ListTile(
+                leading: const Icon(
+                  Icons.admin_panel_settings,
+                  color: Colors.white,
+                ),
+                title: const Text(
+                  'Administrar usuarios',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onTap: () {
+                  if (!isAdmin) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('Acceso denegado'),
+                        content: const Text(
+                          'Solo el administrador puede gestionar usuarios.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                    return;
+                  }
+                  Navigator.pop(context); // cerrar drawer
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminUsersPage()),
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -446,6 +490,7 @@ class HomePage extends StatelessWidget {
                                   productor, // solo para actividades
                               usuarioLogueado:
                                   usuarioLogueado, // solo para perfil
+                              isAdmin: isAdmin, // mantener estado admin
                             ),
                           ),
                         );
