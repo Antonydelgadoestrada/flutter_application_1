@@ -184,10 +184,11 @@ class DBActividades {
       'sync_status': data['sync_status'] ?? 'pending',
       'updated_at': data['updated_at'] ?? now,
     };
+    // Actualizar por actividadId (relación con tabla actividades)
     return await dbClient.update(
       'riegos',
       payload,
-      where: 'id = ?',
+      where: 'actividadId = ?',
       whereArgs: [id],
     );
   }
@@ -259,10 +260,11 @@ class DBActividades {
       'sync_status': data['sync_status'] ?? 'pending',
       'updated_at': data['updated_at'] ?? now,
     };
+    // Actualizar por actividadId
     return await dbClient.update(
       'fertilizaciones',
       payload,
-      where: 'id = ?',
+      where: 'actividadId = ?',
       whereArgs: [id],
     );
   }
@@ -338,10 +340,11 @@ class DBActividades {
       'sync_status': data['sync_status'] ?? 'pending',
       'updated_at': data['updated_at'] ?? now,
     };
+    // Actualizar por actividadId
     return await dbClient.update(
       'cosechas',
       payload,
-      where: 'id = ?',
+      where: 'actividadId = ?',
       whereArgs: [id],
     );
   }
@@ -476,7 +479,9 @@ class DBActividades {
     final now = DateTime.now().toIso8601String();
     final fechaFinal = fecha ?? now;
     return await dbClient.transaction<int>((txn) async {
+      final actividadId = _generarIdAleatorio();
       final actividad = {
+        'id': actividadId,
         'productorId': productorId,
         'fecha': fechaFinal,
         'actividad': 'Riego',
@@ -488,8 +493,14 @@ class DBActividades {
         'sync_status': 'pending',
         'updated_at': now,
       };
-      final actividadId = await txn.insert('actividades', actividad);
+      await txn.insert(
+        'actividades',
+        actividad,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      final riegoId = _generarIdAleatorio();
       final riego = {
+        'id': riegoId,
         'actividadId': actividadId,
         'cantidad_agua': cantidadAgua,
         'metodo': metodoRiego,
@@ -499,7 +510,11 @@ class DBActividades {
         'sync_status': 'pending',
         'updated_at': now,
       };
-      await txn.insert('riegos', riego);
+      await txn.insert(
+        'riegos',
+        riego,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
       return actividadId;
     });
   }
@@ -524,7 +539,9 @@ class DBActividades {
     final now = DateTime.now().toIso8601String();
     final fechaFinal = fecha ?? now;
     return await dbClient.transaction<int>((txn) async {
+      final actividadId = _generarIdAleatorio();
       final actividad = {
+        'id': actividadId,
         'productorId': productorId,
         'fecha': fechaFinal,
         'actividad': 'Fertilización',
@@ -536,8 +553,14 @@ class DBActividades {
         'sync_status': 'pending',
         'updated_at': now,
       };
-      final actividadId = await txn.insert('actividades', actividad);
+      await txn.insert(
+        'actividades',
+        actividad,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      final fertId = _generarIdAleatorio();
       final fert = {
+        'id': fertId,
         'actividadId': actividadId,
         'sector': sector,
         'cultivo_variedad': cultivoVariedad,
@@ -553,7 +576,11 @@ class DBActividades {
         'sync_status': 'pending',
         'updated_at': now,
       };
-      await txn.insert('fertilizaciones', fert);
+      await txn.insert(
+        'fertilizaciones',
+        fert,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
       return actividadId;
     });
   }
@@ -574,7 +601,9 @@ class DBActividades {
     // fechaCosecha es obligatoria (non-nullable), por lo tanto basta con:
     final fechaFinal = fecha ?? fechaCosecha;
     return await dbClient.transaction<int>((txn) async {
+      final actividadId = _generarIdAleatorio();
       final actividad = {
+        'id': actividadId,
         'productorId': productorId,
         'fecha': fechaFinal,
         'actividad': 'Cosecha',
@@ -586,8 +615,14 @@ class DBActividades {
         'sync_status': 'pending',
         'updated_at': now,
       };
-      final actividadId = await txn.insert('actividades', actividad);
+      await txn.insert(
+        'actividades',
+        actividad,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      final cosechaId = _generarIdAleatorio();
       final cosecha = {
+        'id': cosechaId,
         'actividadId': actividadId,
         'fecha': fechaCosecha,
         'tipo': tipo,
@@ -598,7 +633,11 @@ class DBActividades {
         'sync_status': 'pending',
         'updated_at': now,
       };
-      await txn.insert('cosechas', cosecha);
+      await txn.insert(
+        'cosechas',
+        cosecha,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
       return actividadId;
     });
   }
