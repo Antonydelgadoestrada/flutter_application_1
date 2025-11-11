@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'agregar_productor.dart';
-import 'database_productores.dart'; // asegúrate de tener esta importación
+import 'database_productores.dart';
+import 'editar_productor.dart';
 
 class SelectProductorPage extends StatefulWidget {
   const SelectProductorPage({super.key, required List<String> productores});
@@ -114,58 +115,87 @@ class _SelectProductorPageState extends State<SelectProductorPage> {
                                     'Cultivo: ${productor['cultivo_display'] ?? ''}',
                                   ),
                                   onTap: () => _seleccionarProductor(productor),
-                                  trailing: IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () async {
-                                      final confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: const Text(
-                                            'Eliminar productor',
-                                          ),
-                                          content: const Text(
-                                            '¿Estás seguro de que deseas eliminar este productor?',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.of(
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Editar
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          color: Colors.blue,
+                                        ),
+                                        onPressed: () async {
+                                          final actualizado =
+                                              await Navigator.push(
                                                 context,
-                                              ).pop(false),
-                                              child: const Text('Cancelar'),
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      EditarProductorPage(
+                                                        productor: productor,
+                                                      ),
+                                                ),
+                                              );
+                                          if (actualizado == true) {
+                                            cargarProductores();
+                                          }
+                                        },
+                                      ),
+                                      // Eliminar
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                        onPressed: () async {
+                                          final confirm = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text(
+                                                'Eliminar productor',
+                                              ),
+                                              content: const Text(
+                                                '¿Estás seguro de que deseas eliminar este productor?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(false),
+                                                  child: const Text('Cancelar'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(
+                                                    context,
+                                                  ).pop(true),
+                                                  child: const Text(
+                                                    'Eliminar',
+                                                    style: TextStyle(
+                                                      color: Colors.red,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            TextButton(
-                                              onPressed: () => Navigator.of(
-                                                context,
-                                              ).pop(true),
-                                              child: const Text(
-                                                'Eliminar',
-                                                style: TextStyle(
-                                                  color: Colors.red,
+                                          );
+                                          if (confirm == true) {
+                                            await DBProductores.eliminarProductor(
+                                              productor['id'],
+                                            );
+                                            cargarProductores();
+                                            if (!mounted) return;
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Productor eliminado',
                                                 ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                      if (confirm == true) {
-                                        await DBProductores.eliminarProductor(
-                                          productor['id'],
-                                        );
-                                        cargarProductores();
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Productor eliminado',
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    },
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );

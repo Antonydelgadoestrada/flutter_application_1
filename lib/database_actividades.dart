@@ -1,10 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'db_helper.dart';
 
 class DBActividades {
+  /// Genera un ID aleatorio único (número grande entre 1 y 2^31-1)
+  /// Esto evita colisiones incluso si se crean actividades en múltiples dispositivos.
+  static int _generarIdAleatorio() {
+    final random = Random();
+    return random.nextInt(0x7FFFFFFF) + 1; // Rango: 1 a 2,147,483,647
+  }
+
   // Exportar actividades a JSON (mantener compatibilidad)
   static Future<void> _exportarActividadesAJson() async {
     final list = await obtenerTodasActividades();
@@ -17,14 +25,20 @@ class DBActividades {
   static Future<int> agregarActividad(Map<String, dynamic> actividad) async {
     final dbClient = await DBHelper.database;
     final now = DateTime.now().toIso8601String();
+    final idAleatorio = _generarIdAleatorio();
     final data = {
+      'id': idAleatorio, // Asignar ID aleatorio en lugar de AUTOINCREMENT
       ...actividad,
       'id_remoto': actividad['id_remoto'],
       'sync_status': actividad['sync_status'] ?? 'pending',
       'updated_at': actividad['updated_at'] ?? now,
       'deleted_at': actividad['deleted_at'],
     };
-    final id = await dbClient.insert('actividades', data);
+    final id = await dbClient.insert(
+      'actividades',
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     await _exportarActividadesAJson();
     return id;
   }
@@ -133,14 +147,20 @@ class DBActividades {
   static Future<int> agregarRiego(Map<String, dynamic> riego) async {
     final dbClient = await DBHelper.database;
     final now = DateTime.now().toIso8601String();
+    final idAleatorio = _generarIdAleatorio();
     final data = {
+      'id': idAleatorio,
       ...riego,
       'id_remoto': riego['id_remoto'],
       'sync_status': riego['sync_status'] ?? 'pending',
       'updated_at': riego['updated_at'] ?? now,
       'deleted_at': riego['deleted_at'],
     };
-    return await dbClient.insert('riegos', data);
+    return await dbClient.insert(
+      'riegos',
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   static Future<Map<String, dynamic>?> obtenerRiegoPorActividad(
@@ -199,14 +219,20 @@ class DBActividades {
   static Future<int> agregarFertilizacion(Map<String, dynamic> fert) async {
     final dbClient = await DBHelper.database;
     final now = DateTime.now().toIso8601String();
+    final idAleatorio = _generarIdAleatorio();
     final data = {
+      'id': idAleatorio,
       ...fert,
       'id_remoto': fert['id_remoto'],
       'sync_status': fert['sync_status'] ?? 'pending',
       'updated_at': fert['updated_at'] ?? now,
       'deleted_at': fert['deleted_at'],
     };
-    return await dbClient.insert('fertilizaciones', data);
+    return await dbClient.insert(
+      'fertilizaciones',
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   static Future<Map<String, dynamic>?> obtenerFertilizacionPorActividad(
@@ -272,14 +298,20 @@ class DBActividades {
   static Future<int> agregarCosecha(Map<String, dynamic> cosecha) async {
     final dbClient = await DBHelper.database;
     final now = DateTime.now().toIso8601String();
+    final idAleatorio = _generarIdAleatorio();
     final data = {
+      'id': idAleatorio,
       ...cosecha,
       'id_remoto': cosecha['id_remoto'],
       'sync_status': cosecha['sync_status'] ?? 'pending',
       'updated_at': cosecha['updated_at'] ?? now,
       'deleted_at': cosecha['deleted_at'],
     };
-    return await dbClient.insert('cosechas', data);
+    return await dbClient.insert(
+      'cosechas',
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   static Future<Map<String, dynamic>?> obtenerCosechaPorActividad(

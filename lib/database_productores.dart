@@ -1,12 +1,36 @@
 import 'db_helper.dart';
 
 class DBProductores {
+  // Columnas permitidas en la tabla `productores` (usadas para sanitizar payloads)
+  static const List<String> _allowedColumns = [
+    'nombre',
+    'codigo',
+    'area_total',
+    'area',
+    'cultivo',
+    'estimado_cosecha',
+    'densidad',
+    'anio_siembra',
+    'ubicacion',
+    'coordenadas',
+    'gnn',
+    // metadata
+    'id_remoto',
+    'sync_status',
+    'updated_at',
+    'deleted_at',
+  ];
   // Inserta un productor y devuelve el id insertado (establece metadata de sync)
   static Future<int> agregarProductor(Map<String, dynamic> productor) async {
     final dbClient = await DBHelper.database;
     final now = DateTime.now().toIso8601String();
+    // Sanitizar para evitar insertar claves que no sean columnas válidas
+    final cleaned = <String, dynamic>{};
+    for (final k in _allowedColumns) {
+      if (productor.containsKey(k)) cleaned[k] = productor[k];
+    }
     final data = {
-      ...productor,
+      ...cleaned,
       'id_remoto': productor['id_remoto'],
       'sync_status': productor['sync_status'] ?? 'pending',
       'updated_at': productor['updated_at'] ?? now,
@@ -84,8 +108,13 @@ class DBProductores {
   ) async {
     final dbClient = await DBHelper.database;
     final now = DateTime.now().toIso8601String();
+    // Sanitizar y quedarnos solo con las columnas reales de la tabla
+    final cleaned = <String, dynamic>{};
+    for (final k in _allowedColumns) {
+      if (data.containsKey(k)) cleaned[k] = data[k];
+    }
     final payload = {
-      ...data,
+      ...cleaned,
       'sync_status': data['sync_status'] ?? 'pending',
       'updated_at': data['updated_at'] ?? now,
     };

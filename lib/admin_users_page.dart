@@ -74,7 +74,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: role,
+                initialValue: role,
                 items: const [
                   DropdownMenuItem(value: 'user', child: Text('Usuario')),
                   DropdownMenuItem(
