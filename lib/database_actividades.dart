@@ -184,20 +184,12 @@ class DBActividades {
       'sync_status': data['sync_status'] ?? 'pending',
       'updated_at': data['updated_at'] ?? now,
     };
-    // Actualizar por actividadId (relación con tabla actividades)
-    try {
-      final res = await dbClient.update(
-        'riegos',
-        payload,
-        where: 'actividadId = ?',
-        whereArgs: [id],
-      );
-      print('DBActividades.actualizarRiego -> payload: $payload, rows: $res');
-      return res;
-    } catch (e) {
-      print('DBActividades.actualizarRiego ERROR: $e -- payload: $payload');
-      rethrow;
-    }
+    return await dbClient.update(
+      'riegos',
+      payload,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   static Future<int> eliminarRiego(int id) async {
@@ -267,24 +259,12 @@ class DBActividades {
       'sync_status': data['sync_status'] ?? 'pending',
       'updated_at': data['updated_at'] ?? now,
     };
-    // Actualizar por actividadId
-    try {
-      final res = await dbClient.update(
-        'fertilizaciones',
-        payload,
-        where: 'actividadId = ?',
-        whereArgs: [id],
-      );
-      print(
-        'DBActividades.actualizarFertilizacion -> payload: $payload, rows: $res',
-      );
-      return res;
-    } catch (e) {
-      print(
-        'DBActividades.actualizarFertilizacion ERROR: $e -- payload: $payload',
-      );
-      rethrow;
-    }
+    return await dbClient.update(
+      'fertilizaciones',
+      payload,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   static Future<int> eliminarFertilizacion(int id) async {
@@ -358,20 +338,12 @@ class DBActividades {
       'sync_status': data['sync_status'] ?? 'pending',
       'updated_at': data['updated_at'] ?? now,
     };
-    // Actualizar por actividadId
-    try {
-      final res = await dbClient.update(
-        'cosechas',
-        payload,
-        where: 'actividadId = ?',
-        whereArgs: [id],
-      );
-      print('DBActividades.actualizarCosecha -> payload: $payload, rows: $res');
-      return res;
-    } catch (e) {
-      print('DBActividades.actualizarCosecha ERROR: $e -- payload: $payload');
-      rethrow;
-    }
+    return await dbClient.update(
+      'cosechas',
+      payload,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   static Future<int> eliminarCosecha(int id) async {
