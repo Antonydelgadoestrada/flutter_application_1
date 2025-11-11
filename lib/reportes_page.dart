@@ -3,6 +3,7 @@ import 'database_productores.dart';
 import 'reportes.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
+import 'export_service.dart';
 
 class ReportesPage extends StatefulWidget {
   const ReportesPage({super.key});
@@ -70,6 +71,35 @@ class _ReportesPageState extends State<ReportesPage> {
     }
   }
 
+  Future<void> _exportServidor() async {
+    // URL de la función: reemplaza po URL deployada por firebase
+    const functionUrl = 'https://firebase.google.com/docs/cli#update-cli';
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Solicitando generación de reporte en servidor...'),
+      ),
+    );
+    try {
+      final svc = ExportService(functionUrl);
+      final url = await svc.generateReport();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reporte generado. Abriendo enlace...')),
+      );
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo abrir la URL: $url')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al generar reporte: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,6 +140,12 @@ class _ReportesPageState extends State<ReportesPage> {
                     onPressed: _exportExcel,
                     icon: const Icon(Icons.grid_on),
                     label: const Text('Exportar Excel'),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: _exportServidor,
+                    icon: const Icon(Icons.cloud_upload),
+                    label: const Text('Generar reporte en servidor'),
                   ),
                 ],
               ),

@@ -92,6 +92,12 @@ class _EditarActividadPageState extends State<EditarActividadPage> {
         } else if (_actividad == 'Cosecha') {
           await DBActividades.actualizarCosecha(_idActividad!, _detalles!);
         }
+        // Recargar detalles desde la BD para asegurar que reflejamos cambios
+        await _cargarDetalles();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Detalles actualizados: ${_detalles ?? {}}')),
+        );
       }
 
       if (!mounted) return;
@@ -126,34 +132,7 @@ class _EditarActividadPageState extends State<EditarActividadPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ID (solo lectura, no editable)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'ID de Actividad',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              _idActividad?.toString() ?? 'N/A',
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Nota: el ID interno no se muestra ni se edita en este formulario.
 
                     // Tipo de actividad (no editable)
                     Padding(
@@ -248,23 +227,35 @@ class _EditarActividadPageState extends State<EditarActividadPage> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
-                      ..._detalles!.entries.map(
-                        (e) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: TextFormField(
-                            initialValue: e.value?.toString() ?? '',
-                            decoration: InputDecoration(
-                              labelText: e.key,
-                              border: const OutlineInputBorder(),
+                      // Excluir campos metadata/relacionales que no deben editarse aquí
+                      ..._detalles!.entries
+                          .where(
+                            (e) => !{
+                              'id',
+                              'actividadId',
+                              'id_remoto',
+                              'sync_status',
+                              'updated_at',
+                              'deleted_at',
+                            }.contains(e.key),
+                          )
+                          .map(
+                            (e) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: TextFormField(
+                                initialValue: e.value?.toString() ?? '',
+                                decoration: InputDecoration(
+                                  labelText: e.key,
+                                  border: const OutlineInputBorder(),
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _detalles![e.key] = value;
+                                  });
+                                },
+                              ),
                             ),
-                            onChanged: (value) {
-                              setState(() {
-                                _detalles![e.key] = value;
-                              });
-                            },
                           ),
-                        ),
-                      ),
                     ],
                   ],
                 ),
@@ -276,6 +267,7 @@ class _EditarActividadPageState extends State<EditarActividadPage> {
   @override
   void dispose() {
     _observacionesController.dispose();
+    _responsableController.dispose();
     super.dispose();
   }
 }
