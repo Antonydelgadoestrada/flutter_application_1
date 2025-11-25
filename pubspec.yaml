@@ -23,6 +23,7 @@ dependencies:
   firebase_storage: ^11.1.0    # opcional (para fotos)
   shared_preferences: ^2.1.1
   connectivity_plus: ^4.0.0
+  flutter_lints: ^6.0.0
 
 dev_dependencies:
   flutter_test:

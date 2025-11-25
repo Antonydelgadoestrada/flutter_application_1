@@ -91,11 +91,11 @@ class _VerRegistrosPageState extends State<VerRegistrosPage> {
     );
 
     if (actualizado == true) {
-      cargarActividades(); // Recargar lista
+      await cargarActividades(); // Esperar a que cargue
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Actividad actualizada')));
+      ).showSnackBar(const SnackBar(content: Text('✅ Actividad actualizada')));
     }
   }
 

@@ -1,41 +1,149 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:excel/excel.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'database_actividades.dart';
+import 'database_productores.dart';
 
-/// Servicio mínimo para solicitar a la Cloud Function que genere un reporte.
+/// Servicio para generar Excel con datos del dispositivo y subirlo a Firebase Storage.
 class ExportService {
-  final String functionUrl;
+  static Future<String> generarReporteCompleto() async {
+    print('========== INICIANDO GENERACIÓN DE REPORTE ==========');
 
-  ExportService(this.functionUrl);
+    try {
+      // Leer datos
+      print('Leyendo productores...');
+      final productores = await DBProductores.obtenerProductores();
+      print('Productores: ${productores.length}');
 
-  /// Llama a la función (POST) y devuelve la URL del archivo generado.
-  /// Requiere que el usuario esté autenticado con Firebase Auth; el ID token
-  /// se envía en Authorization: Bearer <token>.
-  Future<String> generateReport() async {
-    final user = FirebaseAuth.instance.currentUser;
-    String? idToken;
-    if (user != null) {
-      idToken = await user.getIdToken();
-    }
+      print('Leyendo actividades...');
+      final actividades = await DBActividades.obtenerTodasActividades();
+      print('Actividades: ${actividades.length}');
 
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-      if (idToken != null) 'Authorization': 'Bearer $idToken',
-    };
+      final riegos = await DBActividades.obtenerTodosRiegos();
+      final fertilizaciones = await DBActividades.obtenerTodasFertilizaciones();
+      final cosechas = await DBActividades.obtenerTodasCosechas();
 
-    final resp = await http
-        .post(Uri.parse(functionUrl), headers: headers)
-        .timeout(const Duration(seconds: 120));
+      // Crear Excel
+      print('Creando Excel...');
+      final excel = Excel.createExcel();
+      excel.delete(excel.getDefaultSheet()!);
 
-    if (resp.statusCode >= 200 && resp.statusCode < 300) {
-      final body = json.decode(resp.body) as Map<String, dynamic>;
-      final url = body['url'] as String?;
-      if (url != null) return url;
-      throw Exception('La función no devolvió la URL del archivo');
-    } else {
-      throw Exception(
-        'Error al generar reporte: ${resp.statusCode} ${resp.body}',
+      // Productores
+      final sheetProd = excel['Productores'];
+      sheetProd.appendRow([
+        'ID',
+        'Código',
+        'Nombre',
+        'Cultivo',
+        'Área',
+        'Ubicación',
+      ]);
+      for (final p in productores) {
+        sheetProd.appendRow([
+          p['id']?.toString() ?? '',
+          p['codigo']?.toString() ?? '',
+          p['nombre']?.toString() ?? '',
+          p['cultivo']?.toString() ?? '',
+          p['area']?.toString() ?? '',
+          p['ubicacion']?.toString() ?? '',
+        ]);
+      }
+
+      // Actividades
+      final sheetAct = excel['Actividades'];
+      sheetAct.appendRow([
+        'ID',
+        'Productor',
+        'Fecha',
+        'Actividad',
+        'Responsable',
+      ]);
+      for (final a in actividades) {
+        sheetAct.appendRow([
+          a['id']?.toString() ?? '',
+          a['productorId']?.toString() ?? '',
+          a['fecha']?.toString() ?? '',
+          a['actividad']?.toString() ?? '',
+          a['responsable']?.toString() ?? '',
+        ]);
+      }
+
+      // Riegos
+      final sheetRiego = excel['Riegos'];
+      sheetRiego.appendRow(['ID', 'Actividad', 'Cantidad Agua', 'Método']);
+      for (final r in riegos) {
+        sheetRiego.appendRow([
+          r['id']?.toString() ?? '',
+          r['actividadId']?.toString() ?? '',
+          r['cantidad_agua']?.toString() ?? '',
+          r['metodo']?.toString() ?? '',
+        ]);
+      }
+
+      // Fertilizaciones
+      final sheetFert = excel['Fertilizaciones'];
+      sheetFert.appendRow(['ID', 'Actividad', 'Sector', 'Método']);
+      for (final f in fertilizaciones) {
+        sheetFert.appendRow([
+          f['id']?.toString() ?? '',
+          f['actividadId']?.toString() ?? '',
+          f['sector']?.toString() ?? '',
+          f['metodo_aplicacion']?.toString() ?? '',
+        ]);
+      }
+
+      // Cosechas
+      final sheetCos = excel['Cosechas'];
+      sheetCos.appendRow(['ID', 'Actividad', 'Fecha', 'Tipo', 'Cantidad']);
+      for (final c in cosechas) {
+        sheetCos.appendRow([
+          c['id']?.toString() ?? '',
+          c['actividadId']?.toString() ?? '',
+          c['fecha']?.toString() ?? '',
+          c['tipo']?.toString() ?? '',
+          c['cantidad']?.toString() ?? '',
+        ]);
+      }
+
+      print('Excel creado con 5 hojas');
+
+      // Guardar y subir
+      print('Codificando Excel...');
+      final bytes = excel.encode();
+      if (bytes == null) throw Exception('Excel encode retornó null');
+
+      final dir = await getApplicationDocumentsDirectory();
+      final fileName = 'reporte_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+      final file = File('${dir.path}/$fileName');
+
+      print('Guardando archivo: $fileName');
+      await file.writeAsBytes(bytes, flush: true);
+
+      print('Subiendo a Firebase Storage...');
+      final ref = FirebaseStorage.instance.ref('reportes/$fileName');
+
+      // Subir con metadatos explícitos para evitar NullPointerException
+      await ref.putFile(
+        file,
+        SettableMetadata(
+          contentType:
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          customMetadata: {'uploaded_at': DateTime.now().toIso8601String()},
+        ),
       );
+      print('Archivo subido exitosamente');
+      final url = await ref.getDownloadURL();
+
+      print('Limpiando archivos...');
+      await file.delete();
+
+      print('========== REPORTE COMPLETADO ==========');
+      return url;
+    } catch (e) {
+      print('========== ERROR ==========');
+      print('$e');
+      rethrow;
     }
   }
 }

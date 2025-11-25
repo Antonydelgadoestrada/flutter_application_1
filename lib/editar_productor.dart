@@ -143,8 +143,9 @@ class _EditarProductorPageState extends State<EditarProductorPage> {
                       decoration: const InputDecoration(labelText: 'Nombre'),
                       textCapitalization: TextCapitalization.words,
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty)
+                        if (v == null || v.trim().isEmpty) {
                           return 'El nombre es obligatorio';
+                        }
                         return null;
                       },
                     ),

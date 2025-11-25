@@ -638,4 +638,21 @@ class DBActividades {
       return actividadId;
     });
   }
+
+  // --- Métodos auxiliares para exportación ---
+  static Future<List<Map<String, dynamic>>> obtenerTodosRiegos() async {
+    final dbClient = await DBHelper.database;
+    return await dbClient.query('riegos');
+  }
+
+  static Future<List<Map<String, dynamic>>>
+  obtenerTodasFertilizaciones() async {
+    final dbClient = await DBHelper.database;
+    return await dbClient.query('fertilizaciones');
+  }
+
+  static Future<List<Map<String, dynamic>>> obtenerTodasCosechas() async {
+    final dbClient = await DBHelper.database;
+    return await dbClient.query('cosechas');
+  }
 }

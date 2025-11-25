@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home_page.dart';
 
 import 'database_usuarios.dart';
 import 'firebase_options.dart';
+import 'sync_usuarios.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   // Seed admin user in the local usuarios DB (creates admin/administrado1234 if missing)
   try {
     await DBHelper.seedAdmin();
@@ -21,6 +24,30 @@ Future<void> main() async {
   } catch (e) {
     // ignore seed errors during startup
   }
+
+  // Descargar usuarios de Firestore la PRIMERA VEZ que se abre la app
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final esLaPrimeraVez = prefs.getBool('primera_vez_app') ?? true;
+
+    if (esLaPrimeraVez) {
+      debugPrint(
+        '=== Primera vez abriendo la app, descargando usuarios de Firestore ===',
+      );
+      await SyncUsuarios.descargarUsuariosDelServidor();
+      // Marcar que ya no es primera vez
+      await prefs.setBool('primera_vez_app', false);
+      debugPrint(
+        '=== Usuarios descargados y primera_vez marcada como false ===',
+      );
+    } else {
+      debugPrint('No es primera vez, saltando descarga de usuarios');
+    }
+  } catch (e) {
+    debugPrint('Error descargando usuarios en main: $e');
+    // No bloquea el inicio de la app si hay error
+  }
+
   runApp(const MyApp());
 }
 
@@ -65,6 +92,7 @@ class _LoginPageState extends State<LoginPage> {
         context,
         MaterialPageRoute(
           builder: (_) => HomePage(
+            productorSeleccionado: null,
             usuarioLogueado: userData['usuario'] as String,
             isAdmin: userData['role'] == 'admin',
           ),

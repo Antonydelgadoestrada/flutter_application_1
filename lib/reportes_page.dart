@@ -4,6 +4,7 @@ import 'reportes.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'export_service.dart';
+import 'connectivity_service.dart';
 
 class ReportesPage extends StatefulWidget {
   const ReportesPage({super.key});
@@ -17,11 +18,25 @@ class _ReportesPageState extends State<ReportesPage> {
   int? productorId;
   String? productorNombre;
   bool cargando = true;
+  late ConnectivityService _connectivityService;
 
   @override
   void initState() {
     super.initState();
+    _connectivityService = ConnectivityService();
+    _connectivityService.addListener(_onConnectivityChanged);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _connectivityService.removeListener(_onConnectivityChanged);
+    _connectivityService.dispose();
+    super.dispose();
+  }
+
+  void _onConnectivityChanged() {
+    setState(() {});
   }
 
   Future<void> _load() async {
@@ -39,16 +54,36 @@ class _ReportesPageState extends State<ReportesPage> {
       ).showSnackBar(const SnackBar(content: Text('Seleccione un productor')));
       return;
     }
-    final path = await Reportes.generarPdfReporte(
-      productorId!,
-      productorNombre ?? '',
-    );
+
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('PDF guardado en: $path')));
-    // intentar abrir el archivo (opcional)
-    if (await File(path).exists()) {
-      await launchUrl(Uri.file(path));
+    ).showSnackBar(const SnackBar(content: Text('📄 Generando PDF...')));
+
+    try {
+      final path = await Reportes.generarPdfReporte(
+        productorId!,
+        productorNombre ?? '',
+      );
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('✅ PDF descargado en Descargas'),
+          action: SnackBarAction(
+            label: 'Abrir',
+            onPressed: () async {
+              if (await File(path).exists()) {
+                await launchUrl(Uri.file(path));
+              }
+            },
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('❌ Error: $e')));
     }
   }
 
@@ -59,44 +94,83 @@ class _ReportesPageState extends State<ReportesPage> {
       ).showSnackBar(const SnackBar(content: Text('Seleccione un productor')));
       return;
     }
-    final path = await Reportes.generarExcelReporte(
-      productorId!,
-      productorNombre ?? '',
-    );
+
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('Excel guardado en: $path')));
-    if (await File(path).exists()) {
-      await launchUrl(Uri.file(path));
+    ).showSnackBar(const SnackBar(content: Text('📊 Generando Excel...')));
+
+    try {
+      final path = await Reportes.generarExcelReporte(
+        productorId!,
+        productorNombre ?? '',
+      );
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('✅ Excel descargado en Descargas'),
+          action: SnackBarAction(
+            label: 'Abrir',
+            onPressed: () async {
+              if (await File(path).exists()) {
+                await launchUrl(Uri.file(path));
+              }
+            },
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      debugPrint('Error en _exportExcel: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error: ${e.toString().substring(0, 80)}'),
+          duration: const Duration(seconds: 5),
+        ),
+      );
     }
   }
 
   Future<void> _exportServidor() async {
-    // URL de la función: reemplaza po URL deployada por firebase
-    const functionUrl = 'https://firebase.google.com/docs/cli#update-cli';
+    if (!_connectivityService.hasInternet) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '❌ No hay conexión a internet. Esta función requiere conexión.',
+          ),
+        ),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Solicitando generación de reporte en servidor...'),
-      ),
+      const SnackBar(content: Text('☁️ Generando reporte en servidor...')),
     );
     try {
-      final svc = ExportService(functionUrl);
-      final url = await svc.generateReport();
+      final url = await ExportService.generarReporteCompleto();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reporte generado. Abriendo enlace...')),
+        SnackBar(
+          content: const Text(
+            '✅ Reporte guardado en Descargas y Firebase Storage.',
+          ),
+          action: SnackBarAction(
+            label: 'Descargar',
+            onPressed: () async {
+              final uri = Uri.parse(url);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              }
+            },
+          ),
+          duration: const Duration(seconds: 10),
+        ),
       );
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo abrir la URL: $url')),
-        );
-      }
     } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error al generar reporte: $e')));
+      ).showSnackBar(SnackBar(content: Text('❌ Error: $e')));
     }
   }
 
@@ -143,9 +217,19 @@ class _ReportesPageState extends State<ReportesPage> {
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
-                    onPressed: _exportServidor,
-                    icon: const Icon(Icons.cloud_upload),
-                    label: const Text('Generar reporte en servidor'),
+                    onPressed: _connectivityService.hasInternet
+                        ? _exportServidor
+                        : null,
+                    icon: Icon(
+                      _connectivityService.hasInternet
+                          ? Icons.cloud_upload
+                          : Icons.cloud_off,
+                    ),
+                    label: Text(
+                      _connectivityService.hasInternet
+                          ? 'Generar reporte en servidor'
+                          : 'Sin conexión (reporte en servidor)',
+                    ),
                   ),
                 ],
               ),

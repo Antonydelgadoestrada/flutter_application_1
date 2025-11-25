@@ -8,8 +8,10 @@ import 'package:flutter_application_1/database_productores.dart'; // Importa tu 
 import 'reportes_page.dart';
 import 'firestore_sync_manager.dart';
 import 'admin_users_page.dart';
+import 'sync_usuarios.dart';
+import 'connectivity_service.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final String? productorSeleccionado;
   final String usuarioLogueado;
   final bool isAdmin;
@@ -19,6 +21,31 @@ class HomePage extends StatelessWidget {
     required this.usuarioLogueado,
     this.isAdmin = false,
   });
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late ConnectivityService _connectivityService;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectivityService = ConnectivityService();
+    _connectivityService.addListener(_onConnectivityChanged);
+  }
+
+  @override
+  void dispose() {
+    _connectivityService.removeListener(_onConnectivityChanged);
+    _connectivityService.dispose();
+    super.dispose();
+  }
+
+  void _onConnectivityChanged() {
+    setState(() {});
+  }
 
   void _cerrarSesion(BuildContext context) {
     Navigator.of(context).pushAndRemoveUntil(
@@ -58,27 +85,61 @@ class HomePage extends StatelessWidget {
         title: Image.asset('assets/logo.png', height: 100),
         centerTitle: true,
         actions: [
-          // { changed code } botón pequeño de sincronización
+          // Indicador de conectividad
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Center(
+              child: Tooltip(
+                message: _connectivityService.hasInternet
+                    ? '🌐 Conectado a internet'
+                    : '❌ Sin conexión a internet',
+                child: Icon(
+                  _connectivityService.hasInternet
+                      ? Icons.cloud_done
+                      : Icons.cloud_off,
+                  color: _connectivityService.hasInternet
+                      ? Colors.green
+                      : Colors.red,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+          // Botón de sincronización
           IconButton(
             icon: const Icon(Icons.sync, color: Colors.black),
-            tooltip: 'Sincronizar ahora',
-            onPressed: () async {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Iniciando sincronización...')),
-              );
-              try {
-                await FirestoreSyncManager.runSync();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sincronización completada.')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error en sincronización: ${e.toString()}'),
-                  ),
-                );
-              }
-            },
+            tooltip: _connectivityService.hasInternet
+                ? 'Sincronizar ahora'
+                : 'Sin conexión a internet',
+            onPressed: _connectivityService.hasInternet
+                ? () async {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('📤 Iniciando sincronización...'),
+                      ),
+                    );
+                    try {
+                      await FirestoreSyncManager.runSync();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('✅ Sincronización completada.'),
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('❌ Error: ${e.toString()}')),
+                      );
+                    }
+                  }
+                : () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          '❌ No hay conexión a internet. Sincronización deshabilitada.',
+                        ),
+                      ),
+                    );
+                  },
           ),
           IconButton(
             icon: const Icon(Icons.person, color: Colors.black),
@@ -87,7 +148,7 @@ class HomePage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => UserPage(usuario: usuarioLogueado),
+                  builder: (_) => UserPage(usuario: widget.usuarioLogueado),
                 ),
               );
             },
@@ -113,7 +174,7 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
                 onTap: () {
-                  if (productorSeleccionado == null) {
+                  if (widget.productorSeleccionado == null) {
                     _mostrarAlerta(context);
                   } else {
                     // Aquí podrías navegar a una pantalla de inspecciones
@@ -122,7 +183,7 @@ class HomePage extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) => NuevaActividadDiariaPage(
-                          nombreProductor: productorSeleccionado!,
+                          nombreProductor: widget.productorSeleccionado!,
                         ),
                       ),
                     );
@@ -166,8 +227,8 @@ class HomePage extends StatelessWidget {
                           MaterialPageRoute(
                             builder: (_) => HomePage(
                               productorSeleccionado: productor,
-                              usuarioLogueado: usuarioLogueado,
-                              isAdmin: isAdmin,
+                              usuarioLogueado: widget.usuarioLogueado,
+                              isAdmin: widget.isAdmin,
                             ),
                           ),
                         );
@@ -180,14 +241,14 @@ class HomePage extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => NuevaActividadDiariaPage(
-                              nombreProductor: productorSeleccionado!,
+                              nombreProductor: widget.productorSeleccionado!,
                             ),
                           ),
                         );
@@ -200,7 +261,7 @@ class HomePage extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         // Navegar a registro de riego
@@ -213,7 +274,7 @@ class HomePage extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         // Navegar a registro de fertilización
@@ -226,7 +287,7 @@ class HomePage extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         // Navegar a registro de compra de insumos
@@ -239,7 +300,7 @@ class HomePage extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         // Navegar a registro de cosecha y venta
@@ -266,7 +327,7 @@ class HomePage extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         Navigator.push(
@@ -284,7 +345,7 @@ class HomePage extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         Navigator.push(
@@ -302,7 +363,7 @@ class HomePage extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         // Navegar a ver informes anteriores
@@ -315,7 +376,7 @@ class HomePage extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         // Navegar a compartir/exportar informes
@@ -350,9 +411,44 @@ class HomePage extends StatelessWidget {
                       '> Sincronizar con servidor',
                       style: TextStyle(color: Colors.white),
                     ),
-                    onTap: () {
-                      // Aquí podrías implementar la lógica de sincronización con Firebase
-                    },
+                    enabled: _connectivityService.hasInternet,
+                    onTap: _connectivityService.hasInternet
+                        ? () async {
+                            Navigator.of(context).pop(); // Cerrar drawer
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('📤 Sincronizando usuarios...'),
+                              ),
+                            );
+                            try {
+                              // Subir usuarios locales pendientes a Firestore
+                              await SyncUsuarios.subirUsuariosAlServidor();
+                              // Descargar usuarios del servidor
+                              await SyncUsuarios.descargarUsuariosDelServidor();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    '✅ Sincronización de usuarios completada.',
+                                  ),
+                                ),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('❌ Error: ${e.toString()}'),
+                                ),
+                              );
+                            }
+                          }
+                        : () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  '❌ No hay conexión a internet. Sincronización deshabilitada.',
+                                ),
+                              ),
+                            );
+                          },
                   ),
                 ],
               ),
@@ -385,7 +481,7 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
                 onTap: () {
-                  if (!isAdmin) {
+                  if (!widget.isAdmin) {
                     showDialog(
                       context: context,
                       builder: (_) => AlertDialog(
@@ -443,8 +539,8 @@ class HomePage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              productorSeleccionado != null
-                  ? 'Productor: $productorSeleccionado'
+              widget.productorSeleccionado != null
+                  ? 'Productor: $widget.productorSeleccionado'
                   : 'Usuario 1',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
@@ -488,8 +584,8 @@ class HomePage extends StatelessWidget {
                               productorSeleccionado:
                                   productor, // solo para actividades
                               usuarioLogueado:
-                                  usuarioLogueado, // solo para perfil
-                              isAdmin: isAdmin, // mantener estado admin
+                                  widget.usuarioLogueado, // solo para perfil
+                              isAdmin: widget.isAdmin, // mantener estado admin
                             ),
                           ),
                         );
@@ -500,14 +596,14 @@ class HomePage extends StatelessWidget {
                     icon: Icons.event_note,
                     label: 'NUEVA ACTIVIDAD DIARIA',
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => NuevaActividadDiariaPage(
-                              nombreProductor: productorSeleccionado!,
+                              nombreProductor: widget.productorSeleccionado!,
                             ),
                           ),
                         );
@@ -518,13 +614,13 @@ class HomePage extends StatelessWidget {
                     icon: Icons.insert_chart,
                     label: 'VER REGISTROS',
                     onTap: () async {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         // Aquí obtienes el ID del productor por su nombre
                         final productorId =
                             await DBProductores.obtenerIdPorNombre(
-                              productorSeleccionado!,
+                              widget.productorSeleccionado!,
                             );
                         if (productorId == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -550,7 +646,7 @@ class HomePage extends StatelessWidget {
                     icon: Icons.cloud,
                     label: 'REPORTES',
                     onTap: () {
-                      if (productorSeleccionado == null) {
+                      if (widget.productorSeleccionado == null) {
                         _mostrarAlerta(context);
                       } else {
                         Navigator.push(

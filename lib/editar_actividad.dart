@@ -211,7 +211,7 @@ class _EditarActividadPageState extends State<EditarActividadPage> {
                       ),
                       maxLines: 3,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null || value.trim().isEmpty) {
                           return 'Por favor ingrese observaciones';
                         }
                         return null;
